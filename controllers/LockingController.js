@@ -1,5 +1,10 @@
 import jwt from 'jsonwebtoken';
+import moment from 'moment';
 
+/**
+ * GET /lock/:_id
+ * Attempts to acquire a lock for the file
+ */
 const lockFile = (req, res) => {
   let lockedFiles = req.app.get('lockedFiles');
 
@@ -12,10 +17,11 @@ const lockFile = (req, res) => {
     return res.status(403).send({granted: false, message: `Invalid fields - email: ${email}, _id: ${_id}`});
   }
   const { secret, expiry } = req.app.get('jwt');
-  if(!lockedFiles.get(_id) || lockedFiles.get(_id) === email) {
+  const lock = lockedFiles.get(_id);
+  if(!lock || lock.expiresAt.isBefore(moment()) ||lock.email === email) {
     // Give Lock
     const lock = jwt.sign({data: {email, _id}}, secret, {expiresIn: `${expiry}m`});
-    lockedFiles.set(_id, email);
+    lockedFiles.set(_id, {email, expiresAt: moment().add(expiry, 'm')});
     res.send({granted: true, message: `Lock expires in ${expiry}m`, lock});
     console.log(lockedFiles);
   } else {
@@ -23,16 +29,33 @@ const lockFile = (req, res) => {
   }
 };
 
-
+/**
+ * PUT unlock/:id
+ * Unlocks a file (if lock was previously given to <email> for file <_id>
+ */
 const unlockFile = (req, res) => {
-
+  const { lock, email, _id } = req.body;
 };
 
+
+/**
+ * POST /validate
+ * Checks if a token is valid (requested by File System Nodes)
+ */
 const validateLock = (req, res) => {
   const { lock, email, _id } = req.body;
   res.send(isLockValid(lock, email, _id, req.app.get('jwt')));
 };
 
+
+/**
+ * Helper function to check if lock is valid
+ * @param lock the JWT
+ * @param email the user who apparently received the lock
+ * @param _id the _id of the apparent file they locked
+ * @param jwtParams jwtSecret and expiry
+ * @returns {valid: boolean, message: String}
+ */
 function isLockValid(lock, email, _id, jwtParams) {
   const { secret } = jwtParams;
   try {

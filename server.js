@@ -38,7 +38,7 @@ app.set('jwt', {secret: process.env.JWT_SECRET, expiry: process.env.JWT_EXPIRY})
 
 
 app.get('/lock/:_id', LockingController.lockFile);
-app.get('/unlock/:_id', LockingController.unlockFile);
+app.put('/unlock/:_id', LockingController.unlockFile);
 app.post('/validate', LockingController.validateLock);
 
 // Initialize the Server
