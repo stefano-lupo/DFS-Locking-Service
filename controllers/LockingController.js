@@ -14,7 +14,7 @@ const lockFile = (req, res) => {
 
   //TODO Verify email with Directory Service?
   if(!_id || !email) {
-    return res.status(403).send({granted: false, message: `Invalid fields - email: ${email}, _id: ${_id}`});
+    return res.status(409).send({granted: false, message: `Invalid fields - email: ${email}, _id: ${_id}`});
   }
   const { secret, expiry } = req.app.get('jwt');
   const lock = lockedFiles.get(_id);
@@ -23,8 +23,9 @@ const lockFile = (req, res) => {
     const lock = jwt.sign({data: {email, _id}}, secret, {expiresIn: `${expiry}m`});
     lockedFiles.set(_id, {email, expiresAt: moment().add(expiry, 'm')});
     res.send({granted: true, message: `Lock expires in ${expiry}m`, lock});
-    console.log(lockedFiles);
+    console.log("LOCK GIVEN");
   } else {
+    console.log("LOCK NOT GIVEN");
     res.send({granted: false, message: `Lock is in use - try again later`});
   }
 };
@@ -40,10 +41,17 @@ const unlockFile = (req, res) => {
 
 /**
  * POST /validate
+ * body: {lock, email, _id}
  * Checks if a token is valid (requested by File System Nodes)
  */
 const validateLock = (req, res) => {
   const { lock, email, _id } = req.body;
+  if(!lock || !email || !_id) {
+    return res.status(409).send({
+      valid: false,
+      message: `Invalid fields - email: ${email}, lock: ${lock}, _id: ${_id}`
+    });
+  }
   res.send(isLockValid(lock, email, _id, req.app.get('jwt')));
 };
 
