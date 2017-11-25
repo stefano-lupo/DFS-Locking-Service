@@ -64,16 +64,17 @@ const authenticator = (req, res, next) => {
     let { _id, expires, sessionKey } = JSON.parse(ticket);
     expires = moment(expires);
 
+
     // Ensure the ticket is in date
     if(moment().isAfter(expires)) {
-      console.log(`Token expired on ${expires.format()}`);
+      console.log(`Ticket expired on ${expires.format()}`);
       return res.status(401).send({message: `Authorization token expired on ${expires.format()}`});
     }
 
     // Pass the controllers the decrypted body and the client's _id
     req.clientId = _id;
     if(req.body.encrypted) {
-      req.decrypted =  decrypt(req.body.encrypted, sessionKey);
+      req.decrypted = JSON.parse(decrypt(req.body.encrypted, sessionKey));
     }
   }
 
