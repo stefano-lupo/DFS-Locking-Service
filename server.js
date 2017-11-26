@@ -47,6 +47,7 @@ app.set('lockedFiles', lockedFiles);
 app.set('jwt', {secret: process.env.JWT_SECRET, expiry: process.env.JWT_EXPIRY});
 
 
+
 // Middleware to authenticate / decrypt incoming requests
 const authenticator = (req, res, next) => {
 
@@ -87,13 +88,18 @@ const authenticator = (req, res, next) => {
   next()
 };
 
+
+// Inter Service communication endpoint - UNENCRYPTED
+app.post('/validate', LockingController.validateLock);
+
+
 app.use(authenticator);
 
 
-// Endpoints
+// Authenticated Endpoints
 app.get('/lock/:_id', LockingController.lockFile);
 app.put('/unlock/:_id', LockingController.unlockFile);
-app.post('/validate', LockingController.validateLock);
+
 
 
 // Initialize the Server

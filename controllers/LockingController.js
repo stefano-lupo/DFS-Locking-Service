@@ -39,18 +39,18 @@ const unlockFile = (req, res) => {
 
 /**
  * POST /validate
- * body: {lock, _id}
+ * body: {clientId, lock, _id}
  * Checks if a token is valid (requested by File System Nodes)
  */
 const validateLock = (req, res) => {
-  const { clientId } = req;
-  const { lock, _id } = req.decrypted;
+  const { clientId, lock, _id } = req.body;
   if(!lock) {
     return res.status(409).send({
       valid: false,
       message: `No Lock provided`
     });
   }
+
   res.send(isLockValid(lock, _id, clientId, req.app.get('jwt')));
 };
 
