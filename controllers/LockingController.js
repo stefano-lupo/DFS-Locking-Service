@@ -30,10 +30,26 @@ const lockFile = (req, res) => {
 
 /**
  * PUT unlock/:id
- * Unlocks a file (if lock was previously given to <email> for file <_id>
+ * Unlocks a file (if lock was previously given to <clientId> for file <_id>
  */
 const unlockFile = (req, res) => {
-  const { lock, email, _id } = req.body;
+  const { lock } = req.decrypted;
+  const lockedFiles = req.app.get('lockedFiles');
+  const jwt = req.app.get('jwt');
+  const { clientId } = req;
+  const { _id } = req.params;
+
+  console.log(lock);
+  console.log(clientId);
+  console.log(_id);
+  const validated = isLockValid(lock, _id, clientId, jwt);
+
+  if(!validated.valid) {
+    return res.status(403).send({message: `Invalid lock, begone pest`});
+  }
+
+  lockedFiles.delete(_id);
+  res.send({message: `Lock released`});
 };
 
 
