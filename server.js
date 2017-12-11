@@ -3,12 +3,11 @@ import express from 'express';
 import moment from 'moment';
 import bodyParser from 'body-parser';
 import morgan from 'morgan';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Import Controllers
-import LockingController from './controllers/LockingController';
-
-// Initialize .env
-require('dotenv').config();
+import * as LockingController from './controllers/LockingController';
 
 // Make encryption parameters accessible
 const encryption = {
@@ -25,27 +24,12 @@ app.use(bodyParser.urlencoded({extended: true}));   // Parses application/x-www-
 app.use(bodyParser.json());                         // Parses application/json for req.body
 app.use(morgan('dev'));
 
-
-// TODO: Add mongodb support
-// import mongoose from 'mongoose';
-// Initialize the DB
-// const dbURL = "mongodb://localhost/dfs_filesystem";
-// mongoose.connect(dbURL);
-// const db = mongoose.connection;
-// db.on('error', console.error.bind(console, 'connection error:'));
-// db.once('open', function() {
-//   console.log("Connected to Database");
-// });
-
-
-
-
+// Expost lockedFiles Map to controllers
 let lockedFiles = new Map();
 app.set('lockedFiles', lockedFiles);
 
-// expose environment variables to app
+// Expose JSON Web Token params to controllers
 app.set('jwt', {secret: process.env.JWT_SECRET, expiry: process.env.JWT_EXPIRY});
-
 
 
 // Middleware to authenticate / decrypt incoming requests
@@ -79,7 +63,7 @@ const authenticator = (req, res, next) => {
     }
   }
 
-  // If JSON couldn't be parsed, the token was
+  // If JSON couldn't be parsed, the token was invalid
   catch(err) {
     console.error(err);
     return res.status(401).send({message: `Invalid authorization key provided`})
@@ -89,22 +73,21 @@ const authenticator = (req, res, next) => {
 };
 
 
-// Inter Service communication endpoint - UNENCRYPTED
+// Inter Service communication endpoint
 app.post('/validate', LockingController.validateLock);
 
-
 app.use(authenticator);
-
 
 // Authenticated Endpoints
 app.get('/lock/:_id', LockingController.lockFile);
 app.put('/unlock/:_id', LockingController.unlockFile);
 
 
+const port = process.argv[2] || process.env.PORT || 3002;
 
 // Initialize the Server
-app.listen(3002, function() {
-  console.log('Locking Server on port 3002');
+app.listen(port, function() {
+  console.log(`Locking Server on port ${port}`);
 });
 
 

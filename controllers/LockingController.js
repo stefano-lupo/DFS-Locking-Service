@@ -1,11 +1,16 @@
 import jwt from 'jsonwebtoken';
 import moment from 'moment';
 
+
+/********************************************************************************************************
+ * Client API
+ *******************************************************************************************************/
+
 /**
  * GET /lock/:_id
  * Attempts to acquire a lock for the file
  */
-const lockFile = (req, res) => {
+export const lockFile = (req, res) => {
 
   const { _id } = req.params;
   const { clientId } = req;
@@ -16,10 +21,12 @@ const lockFile = (req, res) => {
 
   let lockedFiles = req.app.get('lockedFiles');
   const { secret, expiry } = req.app.get('jwt');
-
   const lock = lockedFiles.get(_id);
+
+  // If file is not locked or the lock expired or the lock already belongs to client
   if(!lock || lock.expiresAt.isBefore(moment()) || lock.clientId === clientId) {
-    // File is not locked, lock expired or lock already belongs to client (extend)
+
+    // Grant Lock
     const lock = jwt.sign({data: {clientId, _id}}, secret, {expiresIn: `${expiry}m`});
     lockedFiles.set(_id, {clientId, expiresAt: moment().add(expiry, 'm')});
     res.send({granted: true, message: `Lock expires in ${expiry}m`, lock});
@@ -32,16 +39,13 @@ const lockFile = (req, res) => {
  * PUT unlock/:id
  * Unlocks a file (if lock was previously given to <clientId> for file <_id>
  */
-const unlockFile = (req, res) => {
+export const unlockFile = (req, res) => {
   const { lock } = req.decrypted;
   const lockedFiles = req.app.get('lockedFiles');
   const jwt = req.app.get('jwt');
   const { clientId } = req;
   const { _id } = req.params;
 
-  console.log(lock);
-  console.log(clientId);
-  console.log(_id);
   const validated = isLockValid(lock, _id, clientId, jwt);
 
   if(!validated.valid) {
@@ -49,16 +53,20 @@ const unlockFile = (req, res) => {
   }
 
   lockedFiles.delete(_id);
-  res.send({message: `Lock released`});
+  res.send({message: `Lock for ${clientId} on ${_id} released`});
 };
 
+
+/********************************************************************************************************
+ * Inter Service Endpoints
+ *******************************************************************************************************/
 
 /**
  * POST /validate
  * body: {clientId, lock, _id}
  * Checks if a token is valid (requested by File System Nodes)
  */
-const validateLock = (req, res) => {
+export const validateLock = (req, res) => {
   const { clientId, lock, _id } = req.body;
   if(!lock) {
     return res.status(409).send({
@@ -114,16 +122,5 @@ function isLockValid(lock, _id, clientId, jwtParams) {
     }
   }
 }
-
-
-
-
-
-
-module.exports = {
-  lockFile,
-  unlockFile,
-  validateLock
-};
 
 
